@@ -48,9 +48,11 @@
 
             const mediaIds = new Set(
                 primary
+                    .filter(item => item.kind === 'video' || item.kind === 'gif')
                     .map(item => String(item.id || '').split(':')[1] || '')
                     .filter(Boolean)
             );
+            for (const id of XMD.domCollector.hintIds?.(article) || []) mediaIds.add(id);
             let candidates = primary;
             const hasVideoEvidence = primary.some(item => item.kind === 'video' || item.kind === 'gif');
             if (!hasVideoEvidence && mediaIds.size) {
