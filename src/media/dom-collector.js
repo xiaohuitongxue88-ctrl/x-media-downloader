@@ -53,5 +53,15 @@
             }
 
             return XMD.utils.uniqueBy(candidates, item => `${item.id}|${item.url}`);
+        },
+
+        hintIds(scope) {
+            const ids = new Set();
+            if (!scope?.querySelectorAll) return ids;
+            for (const video of scope.querySelectorAll('video')) {
+                const id = XMD.utils.twitterVideoId(video.poster || '');
+                if (id) ids.add(id);
+            }
+            return ids;
         }
     });
