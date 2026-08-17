@@ -22,21 +22,20 @@
     XMD.progressDock.mount(() => taskCenterController?.show?.());
     taskCenterController = XMD.taskCenter.mount(downloadManager, XMD.config);
 
-    const collectCurrentMedia = article => XMD.media.collectCurrent({
+    const collectCurrentMedia = (article, anchor) => XMD.media.collectCurrent({
         article,
-        fiberAnchor: article
+        fiberAnchor: anchor || article
     });
 
-    XMD.floatingTrigger.mount(async ({ article }) => {
-        const mediaItems = collectCurrentMedia(article);
-        if (!mediaItems.length) return;
+    XMD.floatingTrigger.mount(async ({ article, anchor }) => {
+        const mediaItems = collectCurrentMedia(article, anchor);
 
         XMD.mediaPicker.open(mediaItems, {
             onConfirm(selection) {
                 for (const entry of selection) {
                     downloadManager.enqueue(entry.media, entry.filename, {
                         // 继续或重试时只重扫同一个 Tweet；不跨时间线寻找替代资源。
-                        collectFresh: () => Promise.resolve(collectCurrentMedia(article))
+                        collectFresh: () => Promise.resolve(collectCurrentMedia(article, XMD.floatingTrigger.anchorFor(article) || anchor))
                     });
                 }
                 taskCenterController?.show?.();
