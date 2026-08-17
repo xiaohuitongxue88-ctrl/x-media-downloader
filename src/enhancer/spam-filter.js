@@ -65,21 +65,33 @@
 
         readArticle(article) {
             if (!article?.querySelectorAll) return null;
-            const text = [...article.querySelectorAll('[data-testid="tweetText"]')]
-                .map(node => String(node.innerText || node.textContent || '').trim())
-                .filter(Boolean)
-                .join('\n')
-                .slice(0, 3000);
-            const status = article.querySelector('a[href*="/status/"]');
-            const href = String(status?.href || status?.getAttribute?.('href') || '');
-            const match = href.match(/\/(?:x\.com\/|twitter\.com\/)?([a-z0-9_]{1,15})\/status\//i);
-            const username = match?.[1] || '';
+
+            // 正文采用顺序累加，保留引用区已有文本，但不扫描 article 以外节点。
+            let text = '';
+            for (const node of article.querySelectorAll('[data-testid="tweetText"]')) {
+                const chunk = String(node.innerText || node.textContent || '').trim();
+                if (!chunk) continue;
+                text = text ? `${text}\n${chunk}` : chunk;
+                if (text.length >= 3000) break;
+            }
+            text = text.slice(0, 3000);
+
+            const context = XMD.tweetContext?.read?.(article) || {};
+            const username = String(context.author || '').toLowerCase();
             const displayName = String(article.querySelector('[data-testid="User-Name"]')?.innerText || '').slice(0, 180);
-            const links = [...article.querySelectorAll('a[href]')];
-            const externalLinkCount = links.filter(link => {
-                const value = String(link.href || link.getAttribute?.('href') || '');
-                return /^https?:\/\//i.test(value) && !/^https?:\/\/(?:www\.)?(?:x|twitter)\.com\//i.test(value);
-            }).length;
+
+            // 外链计数通过 URL 主机名判定，避免依赖字符串正则猜测站内/站外。
+            let externalLinkCount = 0;
+            for (const anchor of article.querySelectorAll('a[href]')) {
+                const raw = anchor.href || anchor.getAttribute?.('href') || '';
+                let parsed = null;
+                try { parsed = new URL(raw, location.href); } catch {}
+                if (!parsed || !/^https?:$/.test(parsed.protocol)) continue;
+                const host = parsed.hostname.toLowerCase();
+                if (host === 'x.com' || host === 'www.x.com' || host === 'twitter.com' || host === 'www.twitter.com') continue;
+                externalLinkCount += 1;
+            }
+
             const followingEvidence = Boolean(article.querySelector('[data-testid$="-unfollow"]'));
             return { text, displayName, username, externalLinkCount, followingEvidence };
         },

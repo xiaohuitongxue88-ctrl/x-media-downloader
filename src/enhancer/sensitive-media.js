@@ -48,12 +48,14 @@
             const box = document.createElement('div');
             box.className = 'xmd-page-sensitive-media';
             const video = document.createElement('video');
-            video.src = media.url;
-            video.poster = media.poster || '';
-            video.controls = true;
-            video.playsInline = true;
-            video.preload = 'metadata';
-            box.appendChild(video);
+            Object.assign(video, {
+                src: media.url,
+                controls: true,
+                playsInline: true,
+                preload: 'metadata'
+            });
+            if (media.poster) video.setAttribute('poster', media.poster);
+            box.replaceChildren(video);
             anchor.classList?.add('xmd-page-sensitive-mask-hidden');
             anchor.insertAdjacentElement?.('afterend', box);
             return true;
