@@ -54,6 +54,13 @@
             return '';
         },
 
+        twitterVideoId(rawUrl) {
+            const url = this.toUrl(rawUrl);
+            if (!url) return '';
+            const match = url.pathname.match(/\/(?:ext_tw_video|amplify_video|tweet_video)(?:_thumb)?\/(\d+)(?:\/|$)/i);
+            return match?.[1] || '';
+        },
+
         resolutionArea(candidate) {
             return Math.max(0, Number(candidate?.width || 0)) * Math.max(0, Number(candidate?.height || 0));
         },
