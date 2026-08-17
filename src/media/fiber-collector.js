@@ -7,11 +7,32 @@
             if (!anchor || (typeof anchor !== 'object' && typeof anchor !== 'function')) return [];
             const maxNodes = Math.max(20, Math.min(2000, Number(limits.maxNodes || 700)));
             const maxDepth = Math.max(2, Math.min(20, Number(limits.maxDepth || 10)));
+            const maxDomNodes = Math.max(1, Math.min(160, Number(limits.maxDomNodes || 64)));
             const roots = [];
 
-            for (const key of Object.keys(anchor)) {
-                if (key.startsWith('__reactProps$') || key.startsWith('__reactFiber$')) {
-                    roots.push(anchor[key]);
+            const domNodes = [anchor];
+            if (anchor.querySelectorAll) {
+                const descendants = anchor.querySelectorAll('*');
+                for (let index = 0; index < descendants.length && domNodes.length < maxDomNodes; index += 1) {
+                    domNodes.push(descendants[index]);
+                }
+            }
+            let parent = anchor.parentElement || null;
+            while (parent && domNodes.length < maxDomNodes) {
+                domNodes.push(parent);
+                if (String(parent.tagName || '').toLowerCase() === 'article') break;
+                parent = parent.parentElement || null;
+            }
+
+            for (const node of domNodes) {
+                let keys = [];
+                try { keys = Object.getOwnPropertyNames(node); } catch {}
+                for (const key of keys) {
+                    if (!key.startsWith('__reactProps$') && !key.startsWith('__reactFiber$')) continue;
+                    try {
+                        const value = node[key];
+                        if (value) roots.push(value);
+                    } catch {}
                 }
             }
             if (!roots.length) return [];
