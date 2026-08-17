@@ -1,0 +1,16 @@
+X Media Downloader (XMD)
+Copyright (C) 2026 xiaohuitongxue
+
+Official source repository:
+https://github.com/xiaohuitongxue88-ctrl/x-media-downloader
+
+License: GNU General Public License v3.0 only (GPL-3.0-only).
+See LICENSE for the complete license text.
+
+Authenticity notice
+-------------------
+The repository above is the canonical GitHub source for official X Media Downloader releases.
+A Greasy Fork canonical URL will be added to AUTHENTICITY.md after the first official publication there.
+
+The GNU GPL v3 requires modified versions to be marked as changed. Unofficial modified builds must not be represented as official X Media Downloader releases issued by xiaohuitongxue.
+Release checksums are published to make official build artifacts independently verifiable; they are not DRM, telemetry, or a restriction on the freedoms granted by GPL-3.0-only.
