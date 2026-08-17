@@ -11,6 +11,10 @@
 
     XMD.config = Object.freeze({
         downloadConcurrency: 2,
+        pageEnhancer: true,
+        hideAds: true,
+        unlockSensitiveMedia: true,
+        hideAdultSpam: true,
         repositoryUrl: 'https://github.com/xiaohuitongxue88-ctrl/x-media-downloader',
         issuesUrl: 'https://github.com/xiaohuitongxue88-ctrl/x-media-downloader/issues',
         // Greasy Fork 首发完成并取得正式 Script ID 后再填写；为空时 UI 自动隐藏入口。
