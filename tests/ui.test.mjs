@@ -78,6 +78,30 @@ test('浮动触发器锚点优先内部 videoPlayer，再真实 video，再媒�
   assert.equal(XMD.floatingTrigger.anchorFor(article), inner);
 });
 
+
+test('浮动触发器可穿透播放器同级覆盖层，用几何范围锁定当前媒体', () => {
+  const XMD = load(['src/ui/icons.js', 'src/ui/floating-trigger.js']);
+  const anchor = {
+    getBoundingClientRect() { return { left: 100, top: 200, right: 500, bottom: 425, width: 400, height: 225 }; }
+  };
+  const article = {
+    querySelector(selector) {
+      if (selector === '[data-testid="videoPlayer"]') return anchor;
+      return null;
+    }
+  };
+  const overlay = {
+    closest(selector) {
+      if (selector === 'article') return article;
+      return null;
+    }
+  };
+  const hit = XMD.floatingTrigger.resolvePointerTarget({ target: overlay, clientX: 320, clientY: 260 });
+  assert.equal(hit.article, article);
+  assert.equal(hit.anchor, anchor);
+  assert.equal(XMD.floatingTrigger.resolvePointerTarget({ target: overlay, clientX: 40, clientY: 40 }), null);
+});
+
 test('正式配置在 Greasy Fork Script ID 未生成前保持入口为空', () => {
   const XMD = load(['src/core/config.js']);
   assert.equal(XMD.config.greasyForkUrl, '');
@@ -93,4 +117,11 @@ test('主入口将媒体采集、选择器、下载队列、任务中心和 Dock
   assert.match(main, /XMD\.mediaPicker\.open/);
   assert.match(main, /xmd:download-success/);
   assert.doesNotMatch(main, /setInterval\s*\(/);
+});
+
+test('主入口把当前媒体锚点交给 Fiber 采集，并且空结果也打开选择器反馈', () => {
+  const main = fs.readFileSync(path.join(root, 'src/99-main.js'), 'utf8');
+  assert.match(main, /async \(\{ article, anchor \}\)/);
+  assert.match(main, /fiberAnchor:\s*anchor\s*\|\|\s*article/);
+  assert.doesNotMatch(main, /if \(!mediaItems\.length\) return/);
 });

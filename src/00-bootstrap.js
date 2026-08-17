@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X Media Downloader
 // @namespace    https://github.com/xiaohuitongxue88-ctrl/x-media-downloader
-// @version      0.1.0
+// @version      0.1.2
 // @description  X / Twitter 浏览器媒体下载与轻量增强工具。
 // @author       xiaohuitongxue
 // @license      GPL-3.0-only

@@ -6,7 +6,7 @@
         project: 'x-media-downloader',
         owner: 'xiaohuitongxue',
         repository: 'xiaohuitongxue88-ctrl/x-media-downloader',
-        version: '0.1.0'
+        version: '0.1.2'
     });
 
     XMD.config = Object.freeze({

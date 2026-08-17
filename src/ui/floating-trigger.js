@@ -11,6 +11,31 @@
                 || null;
         },
 
+        resolvePointerTarget(event) {
+            const target = event?.target;
+            let article = target?.closest?.('article') || null;
+            if (!article) {
+                const path = event?.composedPath?.() || [];
+                article = path.find(node => node?.matches?.('article')) || null;
+            }
+            if (!article) return null;
+
+            const anchor = this.anchorFor(article);
+            if (!anchor?.getBoundingClientRect) return null;
+            const rect = anchor.getBoundingClientRect();
+            if (rect.width < 24 || rect.height < 24) return null;
+
+            const x = Number(event?.clientX);
+            const y = Number(event?.clientY);
+            if (Number.isFinite(x) && Number.isFinite(y)) {
+                if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return null;
+                return { article, anchor };
+            }
+
+            const mediaRegion = target?.closest?.('video, [data-testid="videoPlayer"], [data-testid="videoComponent"], [data-testid="tweetPhoto"]');
+            return mediaRegion ? { article, anchor } : null;
+        },
+
         mount(onActivate) {
             if (typeof document === 'undefined' || !XMD.uiRoot?.ensure) return null;
             const root = XMD.uiRoot.ensure();
@@ -52,18 +77,15 @@
             const onPointerOver = event => {
                 const path = event.composedPath?.() || [];
                 if (path.includes(button)) return;
-                const target = event.target;
-                if (!target?.closest) return;
-                const mediaRegion = target.closest('video, [data-testid="videoPlayer"], [data-testid="videoComponent"], [data-testid="tweetPhoto"]');
-                const article = mediaRegion?.closest?.('article');
-                if (!mediaRegion || !article) {
+                const hit = this.resolvePointerTarget(event);
+                if (!hit) {
                     button.hidden = true;
                     currentArticle = null;
                     currentAnchor = null;
                     return;
                 }
-                currentArticle = article;
-                currentAnchor = this.anchorFor(article) || mediaRegion;
+                currentArticle = hit.article;
+                currentAnchor = hit.anchor;
                 position();
             };
             const onViewport = () => schedule();
