@@ -20,6 +20,7 @@ export const DEFAULT_SOURCE_ORDER = Object.freeze([
   'src/ui/media-picker.js',
   'src/ui/task-center.js',
   'src/ui/progress-dock.js',
+  'src/ui/support-styles.js',
   'src/enhancer/dom-router.js',
   'src/enhancer/ad-filter.js',
   'src/enhancer/sensitive-media.js',

@@ -45,6 +45,7 @@
     });
 
     XMD.domRouter.start();
+    XMD.supportPrompt.mount(XMD.config);
 
     // 仅提供只读诊断入口，方便现场排查；不上传任何数据。
     XMD.runtime = Object.freeze({
