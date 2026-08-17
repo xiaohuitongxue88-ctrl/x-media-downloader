@@ -50,10 +50,26 @@ test('明确 animated_gif 的媒体对象分类为 gif，其他 MP4 保持 video
 });
 
 test('DOM 采集器只读取传入 Tweet 作用域内的真实媒体节点', () => {
-  const XMD = loadXMD(['src/core/utils.js', 'src/core/evidence.js', 'src/media/media-collector.js', 'src/media/dom-collector.js']);
-  const video = { currentSrc: 'https://video.twimg.com/ext_tw_video/777/pu/vid/1280x720/demo.mp4', src: '', poster: 'https://pbs.twimg.com/ext_tw_video_thumb/777/pu/img/demo.jpg', videoWidth: 1280, videoHeight: 720, querySelectorAll: () => [] };
+  const XMD = loadXMD([
+    'src/core/utils.js', 'src/core/evidence.js', 'src/media/media-collector.js', 'src/media/dom-collector.js'
+  ]);
+  const video = {
+    currentSrc: 'https://video.twimg.com/ext_tw_video/777/pu/vid/1280x720/demo.mp4',
+    src: '',
+    poster: 'https://pbs.twimg.com/ext_tw_video_thumb/777/pu/img/demo.jpg',
+    videoWidth: 1280,
+    videoHeight: 720,
+    querySelectorAll: () => []
+  };
   const image = { src: 'https://pbs.twimg.com/media/Img777?format=jpg&name=small', currentSrc: '' };
-  const article = { querySelectorAll(selector) { if (selector === 'video') return [video]; if (selector === 'img[src*="pbs.twimg.com/media/"]') return [image]; return []; } };
+  const article = {
+    querySelectorAll(selector) {
+      if (selector === 'video') return [video];
+      if (selector === 'img[src*="pbs.twimg.com/media/"]') return [image];
+      return [];
+    }
+  };
+
   const candidates = XMD.domCollector.collect(article);
   assert.equal(candidates.length, 2);
   assert.equal(candidates.find(x => x.kind === 'video').id, 'video:777');
@@ -62,8 +78,28 @@ test('DOM 采集器只读取传入 Tweet 作用域内的真实媒体节点', () 
 });
 
 test('Fiber 采集器在硬预算内读取结构化 variants 并保留 animated_gif 类型', () => {
-  const XMD = loadXMD(['src/core/utils.js', 'src/core/evidence.js', 'src/media/media-collector.js', 'src/media/fiber-collector.js']);
-  const anchor = { __reactProps$abc: { children: { payload: { legacy: { id_str: '888', type: 'animated_gif', video_info: { variants: [ { content_type: 'video/mp4', bitrate: 320000, url: 'https://video.twimg.com/tweet_video/888/low.mp4' }, { content_type: 'video/mp4', bitrate: 832000, url: 'https://video.twimg.com/tweet_video/888/high.mp4' } ] } } } } } };
+  const XMD = loadXMD([
+    'src/core/utils.js', 'src/core/evidence.js', 'src/media/media-collector.js', 'src/media/fiber-collector.js'
+  ]);
+  const anchor = {
+    __reactProps$abc: {
+      children: {
+        payload: {
+          legacy: {
+            id_str: '888',
+            type: 'animated_gif',
+            video_info: {
+              variants: [
+                { content_type: 'video/mp4', bitrate: 320000, url: 'https://video.twimg.com/tweet_video/888/low.mp4' },
+                { content_type: 'video/mp4', bitrate: 832000, url: 'https://video.twimg.com/tweet_video/888/high.mp4' }
+              ]
+            }
+          }
+        }
+      }
+    }
+  };
+
   const candidates = XMD.fiberCollector.collect(anchor, { maxNodes: 100, maxDepth: 8 });
   assert.equal(candidates.length, 2);
   assert.ok(candidates.every(x => x.id === 'gif:888'));
@@ -71,9 +107,87 @@ test('Fiber 采集器在硬预算内读取结构化 variants 并保留 animated_
   assert.ok(candidates.every(x => x.evidence === 'strong'));
 });
 
+test('Fiber 采集器能在当前媒体锚点的后代 DOM 节点发现 React 媒体证据', () => {
+  const XMD = loadXMD([
+    'src/core/utils.js', 'src/core/evidence.js', 'src/media/media-collector.js', 'src/media/fiber-collector.js'
+  ]);
+  const child = {
+    __reactProps$child: {
+      payload: {
+        legacy: {
+          id_str: '889',
+          type: 'video',
+          video_info: {
+            variants: [
+              { content_type: 'video/mp4', bitrate: 2176000, url: 'https://video.twimg.com/ext_tw_video/889/pu/vid/1280x720/high.mp4' }
+            ]
+          }
+        }
+      }
+    },
+    querySelectorAll: () => []
+  };
+  const anchor = {
+    querySelectorAll(selector) {
+      return selector === '*' ? [child] : [];
+    }
+  };
+
+  const candidates = XMD.fiberCollector.collect(anchor, { maxDomNodes: 20, maxNodes: 100, maxDepth: 8 });
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].id, 'video:889');
+  assert.equal(candidates[0].bitrate, 2176000);
+});
+
+test('blob 视频可用当前 Tweet poster 媒体 ID 约束 Performance 兜底', () => {
+  const XMD = loadXMD([
+    'src/core/utils.js', 'src/core/evidence.js',
+    'src/media/tweet-context.js', 'src/media/dom-collector.js', 'src/media/fiber-collector.js',
+    'src/media/performance-collector.js', 'src/media/media-collector.js'
+  ]);
+  const statusAnchor = { href: 'https://x.com/alice/status/556' };
+  const time = { closest: () => statusAnchor };
+  const video = {
+    currentSrc: 'blob:https://x.com/abc',
+    src: 'blob:https://x.com/abc',
+    poster: 'https://pbs.twimg.com/ext_tw_video_thumb/990/pu/img/cover.jpg',
+    videoWidth: 1280,
+    videoHeight: 720,
+    querySelectorAll: () => []
+  };
+  const article = {
+    querySelector(selector) {
+      if (selector === 'time') return time;
+      if (selector === '[data-testid="User-Name"]') return { innerText: 'Alice\n@alice' };
+      if (selector === '[data-testid="tweetText"]') return { innerText: '视频正文' };
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === 'video') return [video];
+      if (selector === 'img[src*="pbs.twimg.com/media/"]') return [];
+      if (selector === 'a[href*="/status/"]') return [statusAnchor];
+      return [];
+    }
+  };
+  const performanceEntries = [
+    { name: 'https://video.twimg.com/ext_tw_video/991/pu/vid/1280x720/wrong.mp4' },
+    { name: 'https://video.twimg.com/ext_tw_video/990/pu/vid/1280x720/right.mp4' }
+  ];
+
+  const items = XMD.media.collectCurrent({ article, fiberAnchor: null, performanceEntries });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].id, 'video:990');
+  assert.match(items[0].url, /\/990\//);
+});
+
 test('Performance 兜底只接受与当前 Tweet 媒体身份匹配的资源', () => {
-  const XMD = loadXMD(['src/core/utils.js', 'src/core/evidence.js', 'src/media/media-collector.js', 'src/media/performance-collector.js']);
-  const entries = [ { name: 'https://video.twimg.com/ext_tw_video/999/pu/vid/640x360/a.mp4', startTime: 10 }, { name: 'https://video.twimg.com/ext_tw_video/123/pu/vid/1280x720/b.mp4', startTime: 20 } ];
+  const XMD = loadXMD([
+    'src/core/utils.js', 'src/core/evidence.js', 'src/media/media-collector.js', 'src/media/performance-collector.js'
+  ]);
+  const entries = [
+    { name: 'https://video.twimg.com/ext_tw_video/999/pu/vid/640x360/a.mp4', startTime: 10 },
+    { name: 'https://video.twimg.com/ext_tw_video/123/pu/vid/1280x720/b.mp4', startTime: 20 }
+  ];
   const candidates = XMD.performanceCollector.collect({ mediaIds: new Set(['123']) }, entries);
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0].id, 'video:123');
@@ -81,11 +195,29 @@ test('Performance 兜底只接受与当前 Tweet 媒体身份匹配的资源', (
 });
 
 test('Tweet 上下文提取 tweetId、作者并附加到最终 MediaItem', () => {
-  const XMD = loadXMD(['src/core/utils.js', 'src/core/evidence.js', 'src/media/tweet-context.js', 'src/media/dom-collector.js', 'src/media/fiber-collector.js', 'src/media/performance-collector.js', 'src/media/media-collector.js']);
+  const XMD = loadXMD([
+    'src/core/utils.js', 'src/core/evidence.js',
+    'src/media/tweet-context.js', 'src/media/dom-collector.js', 'src/media/fiber-collector.js',
+    'src/media/performance-collector.js', 'src/media/media-collector.js'
+  ]);
   const statusAnchor = { href: 'https://x.com/alice/status/555' };
   const time = { closest: () => statusAnchor };
   const image = { src: 'https://pbs.twimg.com/media/Photo555?format=png&name=medium', currentSrc: '' };
-  const article = { querySelector(selector) { if (selector === 'time') return time; if (selector === '[data-testid="User-Name"]') return { innerText: 'Alice\n@alice' }; if (selector === '[data-testid="tweetText"]') return { innerText: '示例正文' }; return null; }, querySelectorAll(selector) { if (selector === 'video') return []; if (selector === 'img[src*="pbs.twimg.com/media/"]') return [image]; if (selector === 'a[href*="/status/"]') return [statusAnchor]; return []; } };
+  const article = {
+    querySelector(selector) {
+      if (selector === 'time') return time;
+      if (selector === '[data-testid="User-Name"]') return { innerText: 'Alice\n@alice' };
+      if (selector === '[data-testid="tweetText"]') return { innerText: '示例正文' };
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === 'video') return [];
+      if (selector === 'img[src*="pbs.twimg.com/media/"]') return [image];
+      if (selector === 'a[href*="/status/"]') return [statusAnchor];
+      return [];
+    }
+  };
+
   const items = XMD.media.collectCurrent({ article, fiberAnchor: null, performanceEntries: [] });
   assert.equal(items.length, 1);
   assert.equal(items[0].tweetId, '555');
